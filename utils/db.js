@@ -1,11 +1,15 @@
 const mongoose = require('mongoose');
-//chat-app-db?retryWrites=true&w=majority&appName=Cluster0
+require('dotenv').config(); // load env vars
+
 const connectDB = async () => {
     try {
-        await mongoose.connect("mongodb+srv://baccar:xRHtJF0l2qTb6fJd@cluster0.e7sj9am.mongodb.net/chat-app-db?retryWrites=true&w=majority&appName=Cluster0");
-        console.log('MongoDB connected');
+        await mongoose.connect(process.env.MONGO_URI, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+        });
+        console.log(' MongoDB connected');
     } catch (error) {
-        console.error(error.message);
+        console.error('MongoDB connection error:', error.message);
         process.exit(1);
     }
 };
