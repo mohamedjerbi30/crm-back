@@ -1,43 +1,28 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
+const userController = require("../controllers/user");
+const auth = require("../middleware/auth");
 
-// Import controllers
-const { getUsers, createUser, getUserByid, loginUser } = require('../controllers/user');
+// Get all users (protected route)
+router.get("/", auth, userController.getUsers);
 
-// Import auth middleware (create this file if it doesn't exist)
-const auth = require('../middleware/auth');
+// Get user by ID (protected route)
+router.get("/:id", auth, userController.getUserByid);
 
-// Debug log to verify controller functions are imported
-console.log('Controller functions loaded:', { 
-    getUsers: typeof getUsers,
-    createUser: typeof createUser,
-    getUserByid: typeof getUserByid,
-    loginUser: typeof loginUser
-});
+// Register user
+router.post("/register", userController.createUser);
 
-// Public routes (no authentication required)
-router.post('/register', createUser);     // Register a new user
-router.post('/login', loginUser);         // Login user
+// Login user
+router.post("/login", userController.loginUser);
 
-// Public routes for getting users
-router.get('/all', getUsers);             // Get all users (consider making this protected)
-router.get('/:id', getUserByid);          // Get user by ID
+// Forgot password
+router.post("/forgot-password", userController.forgotPassword);
+// Verify reset code
+router.post("/verify-reset-code", userController.verifyResetCode);
+// Reset password
+router.post("/reset-password", userController.resetPassword);
 
-// Protected routes (require authentication)
-router.get('/profile/me', auth, (req, res) => {
-    res.json({ 
-        message: "Protected profile data",
-        user: {
-            id: req.user._id,
-            name: req.user.name,
-            email: req.user.email
-        }
-    });
-});
-
-// Alternative protected route (your original)
-router.get('/private', auth, (req, res) => {
-    res.json({ message: "Protected data for " + req.user._id });
-});
+// Verify token
+router.get('/verify-token', userController.verifyToken);
 
 module.exports = router;
