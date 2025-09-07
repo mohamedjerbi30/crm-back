@@ -14,8 +14,8 @@ const auth = async (req, res, next) => {
         // Remove 'Bearer ' from token if present
         const cleanToken = token.startsWith('Bearer ') ? token.slice(7) : token;
         
-        // Verify token - use same secret as in controller
-        const decoded = jwt.verify(cleanToken, process.env.JWT_SECRET || 'default_jwt_secret');
+        // FIXED: Use same secret as in controller (JWT_ACCESS_SECRET)
+        const decoded = jwt.verify(cleanToken, process.env.JWT_ACCESS_SECRET || 'default_jwt_secret');
         
         // Get user from token (optional - for additional verification)
         const user = await User.findById(decoded.id).select('-password');

@@ -3,17 +3,36 @@ const User = require("../models/User")
 const jwt = require("jsonwebtoken")
 const nodemailer = require("nodemailer")
 
-// Configure nodemailer transporter with better error handling
+// FIXED: Simplified Gmail transporter configuration
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // Use STARTTLS
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    pass: process.env.EMAIL_PASS?.replace(/\s/g, ''), // Remove any spaces from app password
   },
-  // Add these for better Gmail compatibility
-  secure: true,
-  port: 465,
+  tls: {
+    rejectUnauthorized: false
+  }
 })
+
+// Alternative transporter for fallback
+const createFallbackTransporter = () => {
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // SSL
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS?.replace(/\s/g, ''), // Remove any spaces from app password
+    },
+    tls: {
+      rejectUnauthorized: false
+    }
+  })
+}
 
 // Verify transporter configuration on startup
 transporter.verify((error, success) => {
@@ -53,30 +72,9 @@ exports.forgotPassword = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 15 * 60 * 1000 // 15 min
     await user.save()
 
-    // Create a new transporter for this request (fallback approach)
-    let requestTransporter;
-    try {
-      requestTransporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-        debug: true,
-        logger: true,
-      })
-      
-      console.log("Created request-specific transporter")
-    } catch (transporterError) {
-      console.error("Failed to create transporter:", transporterError)
-      return res.status(500).json({ 
-        message: "Failed to configure email service" 
-      })
-    }
-
     // Enhanced mail options
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `"Your App Support" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Password Reset Code - Your App",
       html: `
@@ -93,18 +91,34 @@ exports.forgotPassword = async (req, res) => {
       text: `Your password reset code: ${code} (expires in 15 minutes)`,
     }
 
-    // Use the global transporter first, fallback to request transporter
-    const emailTransporter = transporter || requestTransporter
-
     console.log("Attempting to send email with credentials:")
     console.log("From:", process.env.EMAIL_USER)
     console.log("To:", email)
 
-    // Send email with better error handling
-    await emailTransporter.sendMail(mailOptions)
-    console.log("Password reset email sent successfully to:", email)
+    // Try with primary transporter first
+    let emailSent = false
+    try {
+      await transporter.sendMail(mailOptions)
+      emailSent = true
+      console.log("Password reset email sent successfully to:", email)
+    } catch (primaryError) {
+      console.error("Primary transporter failed:", primaryError)
+      
+      // Try with fallback transporter
+      try {
+        const fallbackTransporter = createFallbackTransporter()
+        await fallbackTransporter.sendMail(mailOptions)
+        emailSent = true
+        console.log("Password reset email sent successfully via fallback to:", email)
+      } catch (fallbackError) {
+        console.error("Fallback transporter also failed:", fallbackError)
+        throw fallbackError
+      }
+    }
 
-    res.json({ message: "Reset code sent to email" })
+    if (emailSent) {
+      res.json({ message: "Reset code sent to email" })
+    }
   } catch (error) {
     console.error("Erreur forgotPassword:", error)
     console.error("Error details:")
@@ -115,7 +129,7 @@ exports.forgotPassword = async (req, res) => {
     // Handle specific email errors
     if (error.code === 'EAUTH') {
       return res.status(500).json({ 
-        message: "Email authentication failed. Please check email configuration." 
+        message: "Email authentication failed. Please verify your Gmail app password is correct." 
       })
     }
     
@@ -432,4 +446,165 @@ exports.registerUser = async (req, res) => {
       error: process.env.NODE_ENV === "development" ? err.stack : undefined,
     })
   }
+}
+// Get user profile
+const getProfile = async (req, res) => {
+  try {
+    // req.user should be set by the auth middleware
+    const user = await User.findById(req.user.id).select('-password')
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      }
+    })
+  } catch (error) {
+    console.error('Get profile error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+}
+
+// Update user profile (name and email)
+const updateProfile = async (req, res) => {
+  try {
+    const { name, email } = req.body
+
+    // Validation
+    if (!name || !email) {
+      return res.status(400).json({ message: 'Name and email are required' })
+    }
+
+    if (name.trim().length < 2) {
+      return res.status(400).json({ message: 'Name must be at least 2 characters long' })
+    }
+
+    // Email validation regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Please provide a valid email address' })
+    }
+
+    // Check if email is already taken by another user
+    const existingUser = await User.findOne({ 
+      email: email.toLowerCase(),
+      _id: { $ne: req.user.id } // Exclude current user
+    })
+
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email address is already in use' })
+    }
+
+    // Update user
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      {
+        name: name.trim(),
+        email: email.toLowerCase(),
+        updatedAt: new Date()
+      },
+      { new: true, select: '-password' }
+    )
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt
+      }
+    })
+  } catch (error) {
+    console.error('Update profile error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+}
+
+// Change password
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body
+
+    // Validation
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current password and new password are required' })
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters long' })
+    }
+
+    // Get user with password
+    const user = await User.findById(req.user.id)
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
+    // Check current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password)
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({ message: 'Current password is incorrect' })
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10)
+    const hashedNewPassword = await bcrypt.hash(newPassword, salt)
+
+    // Update password
+    await User.findByIdAndUpdate(req.user.id, {
+      password: hashedNewPassword,
+      updatedAt: new Date()
+    })
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    })
+  } catch (error) {
+    console.error('Change password error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+}
+
+// Delete account
+const deleteAccount = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id)
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
+    // Delete user
+    await User.findByIdAndDelete(req.user.id)
+
+    res.json({
+      success: true,
+      message: 'Account deleted successfully'
+    })
+  } catch (error) {
+    console.error('Delete account error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+}
+
+module.exports = {
+  getProfile,
+  updateProfile,
+  changePassword,
+  deleteAccount
 }

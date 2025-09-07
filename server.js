@@ -7,16 +7,6 @@ const connectDB = require("./utils/db")
 
 // Load environment variables
 dotenv.config()
-// Add this temporarily to the top of your server.js file to debug
-console.log("=== ENVIRONMENT VARIABLES DEBUG ===")
-console.log("EMAIL_USER:", process.env.EMAIL_USER)
-console.log("EMAIL_PASS:", process.env.EMAIL_PASS)
-console.log("EMAIL_USER type:", typeof process.env.EMAIL_USER)
-console.log("EMAIL_PASS type:", typeof process.env.EMAIL_PASS)
-console.log("EMAIL_USER length:", process.env.EMAIL_USER ? process.env.EMAIL_USER.length : 0)
-console.log("EMAIL_PASS length:", process.env.EMAIL_PASS ? process.env.EMAIL_PASS.length : 0)
-console.log("All env keys containing EMAIL:", Object.keys(process.env).filter(key => key.includes('EMAIL')))
-
 // Test nodemailer directly
 const nodemailer = require("nodemailer")
 
@@ -62,6 +52,7 @@ app.post("/api/verify-reset-code", require("./controllers/user").verifyResetCode
 app.post("/api/reset-password", require("./controllers/user").resetPassword)
 // Routes
 app.use("/api/users", userRoutes)
+app.use('/api/profile', require('./routes/profile')) // Add this new profile routes
 
 // Start server
 const PORT = process.env.PORT || 5000

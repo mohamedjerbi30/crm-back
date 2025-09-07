@@ -25,4 +25,24 @@ router.post("/reset-password", userController.resetPassword);
 // Verify token
 router.get('/verify-token', userController.verifyToken);
 
+// @route   GET /api/profile
+// @desc    Get user profile
+// @access  Private
+router.get('/', auth, getProfile)
+
+// @route   PUT /api/profile/update
+// @desc    Update user profile (name and email)
+// @access  Private
+router.put('/update', auth, updateProfile)
+
+// @route   PUT /api/profile/change-password
+// @desc    Change user password
+// @access  Private
+router.put('/change-password', auth, changePassword)
+
+// @route   DELETE /api/profile/delete
+// @desc    Delete user account
+// @access  Private
+router.delete('/delete', auth, deleteAccount)
+
 module.exports = router;
