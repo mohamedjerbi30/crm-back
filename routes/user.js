@@ -17,32 +17,35 @@ router.post("/login", userController.loginUser);
 
 // Forgot password
 router.post("/forgot-password", userController.forgotPassword);
+
 // Verify reset code
 router.post("/verify-reset-code", userController.verifyResetCode);
+
 // Reset password
 router.post("/reset-password", userController.resetPassword);
 
 // Verify token
 router.get('/verify-token', userController.verifyToken);
 
-// @route   GET /api/profile
+// Profile routes - using userController since the functions are defined there
+// @route   GET /api/users/profile
 // @desc    Get user profile
 // @access  Private
-router.get('/', auth, getProfile)
+router.get('/profile', auth, userController.getProfile);
 
-// @route   PUT /api/profile/update
+// @route   PUT /api/users/profile/update
 // @desc    Update user profile (name and email)
 // @access  Private
-router.put('/update', auth, updateProfile)
+router.put('/profile/update', auth, userController.updateProfile);
 
-// @route   PUT /api/profile/change-password
+// @route   PUT /api/users/profile/change-password
 // @desc    Change user password
 // @access  Private
-router.put('/change-password', auth, changePassword)
+router.put('/profile/change-password', auth, userController.changePassword);
 
-// @route   DELETE /api/profile/delete
+// @route   DELETE /api/users/profile/delete
 // @desc    Delete user account
 // @access  Private
-router.delete('/delete', auth, deleteAccount)
+router.delete('/profile/delete', auth, userController.deleteAccount);
 
 module.exports = router;

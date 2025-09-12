@@ -7,6 +7,7 @@ const connectDB = require("./utils/db")
 
 // Load environment variables
 dotenv.config()
+
 // Test nodemailer directly
 const nodemailer = require("nodemailer")
 
@@ -28,6 +29,7 @@ testTransporter.verify((error, success) => {
     console.log("Direct email test successful!")
   }
 })
+
 // Initialize app
 const app = express()
 
@@ -50,9 +52,12 @@ app.post("/api/login", require("./controllers/user").loginUser)
 app.post("/api/forgot-password", require("./controllers/user").forgotPassword)
 app.post("/api/verify-reset-code", require("./controllers/user").verifyResetCode)
 app.post("/api/reset-password", require("./controllers/user").resetPassword)
+
 // Routes
 app.use("/api/users", userRoutes)
-app.use('/api/profile', require('./routes/profile')) // Add this new profile routes
+
+//app.use('/api/profile', require('./routes/profile')) 
+// Profile routes are now handled in /api/users/profile/*
 
 // Start server
 const PORT = process.env.PORT || 5000

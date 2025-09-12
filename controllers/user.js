@@ -20,7 +20,7 @@ const transporter = nodemailer.createTransport({
 
 // Alternative transporter for fallback
 const createFallbackTransporter = () => {
-  return nodemailer.createTransport({
+  return nodemailer.createTransporter({
     host: 'smtp.gmail.com',
     port: 465,
     secure: true, // SSL
@@ -447,8 +447,11 @@ exports.registerUser = async (req, res) => {
     })
   }
 }
+
+// PROFILE FUNCTIONS - NOW PROPERLY EXPORTED
+
 // Get user profile
-const getProfile = async (req, res) => {
+exports.getProfile = async (req, res) => {
   try {
     // req.user should be set by the auth middleware
     const user = await User.findById(req.user.id).select('-password')
@@ -474,7 +477,7 @@ const getProfile = async (req, res) => {
 }
 
 // Update user profile (name and email)
-const updateProfile = async (req, res) => {
+exports.updateProfile = async (req, res) => {
   try {
     const { name, email } = req.body
 
@@ -536,7 +539,7 @@ const updateProfile = async (req, res) => {
 }
 
 // Change password
-const changePassword = async (req, res) => {
+exports.changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body
 
@@ -582,7 +585,7 @@ const changePassword = async (req, res) => {
 }
 
 // Delete account
-const deleteAccount = async (req, res) => {
+exports.deleteAccount = async (req, res) => {
   try {
     const user = await User.findById(req.user.id)
     if (!user) {
@@ -600,11 +603,4 @@ const deleteAccount = async (req, res) => {
     console.error('Delete account error:', error)
     res.status(500).json({ message: 'Server error' })
   }
-}
-
-module.exports = {
-  getProfile,
-  updateProfile,
-  changePassword,
-  deleteAccount
 }
