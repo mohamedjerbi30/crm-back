@@ -1,6 +1,7 @@
 const express = require("express")
 const cors = require("cors")
 const userRoutes = require("./routes/user")
+const courseRoutes = require("./routes/course")
 const jwt = require("jsonwebtoken")
 const dotenv = require("dotenv")
 const connectDB = require("./utils/db")
@@ -55,8 +56,9 @@ app.post("/api/reset-password", require("./controllers/user").resetPassword)
 
 // Routes
 app.use("/api/users", userRoutes)
+app.use("/api", courseRoutes)
 
-//app.use('/api/profile', require('./routes/profile')) 
+//app.use('/api/profile', require('./routes/profile'))
 // Profile routes are now handled in /api/users/profile/*
 
 // Start server
