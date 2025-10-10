@@ -2,40 +2,11 @@ const express = require("express")
 const cors = require("cors")
 const userRoutes = require("./routes/user")
 const courseRoutes = require("./routes/course")
-const jwt = require("jsonwebtoken")
 const dotenv = require("dotenv")
-const connectDB = require("./utils/db")
 
-// Load environment variables
 dotenv.config()
 
-// Test nodemailer directly
-const nodemailer = require("nodemailer")
-
-const testTransporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  debug: true,
-  logger: true,
-})
-
-console.log("=== TESTING EMAIL CONFIGURATION ===")
-testTransporter.verify((error, success) => {
-  if (error) {
-    console.error("Direct email test failed:", error)
-  } else {
-    console.log("Direct email test successful!")
-  }
-})
-
-// Initialize app
 const app = express()
-
-// Connect to DB
-connectDB()
 
 // Middlewares
 app.use(
